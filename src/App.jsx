@@ -73,7 +73,7 @@ function App() {
       <Routes>
         <Route path="/login" element={!isAuthenticated ? <LoginPage onLogin={handleLogin} /> : <Navigate to="/" replace />} />
         
-        <Route path="/print-asset/:assetId" element={isAuthenticated ? <PrintPage assets={assets} /> : <Navigate to="/login" />} />
+        <Route path="/print-asset/:assetId" element={isAuthenticated ? <PrintPage assets={assets} /> : <Navigate to="/print" />} />
 
         <Route 
           element={

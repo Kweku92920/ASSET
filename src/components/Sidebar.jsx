@@ -60,7 +60,7 @@ function Sidebar({ isOpen, toggleSidebar }) {
           </AnimatePresence>
         </div>
         <button onClick={toggleSidebar} className="md:hidden text-brand-gray-600 hover:text-brand-blue">
-          <X size={24} />
+         
         </button>
       </div>
       <nav className="flex-1 px-4 py-6">

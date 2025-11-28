@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
-import { Package, User, Lock } from 'lucide-react';
+import { Package, User, Lock, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 
 const ADMIN_USERNAME = 'Admin';
 const ADMIN_PASSWORD = 'admin';
@@ -9,6 +10,8 @@ const ADMIN_PASSWORD = 'admin';
 function LoginPage({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -29,6 +32,7 @@ function LoginPage({ onLogin }) {
     } else {
       toast.error('Invalid credentials. Please try again.');
     }
+    setLoading(false);
   };
 
   return (
@@ -66,7 +70,7 @@ function LoginPage({ onLogin }) {
             <div className="relative">
               <Lock size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-gray-400" />
               <input
-                type="password"
+                type= {showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
@@ -76,14 +80,20 @@ function LoginPage({ onLogin }) {
             </div>
           </div>
 
+          
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             type="submit"
-            className="w-full bg-brand-blue text-white font-semibold py-3 rounded-lg shadow-md hover:bg-brand-blue-dark transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-blue"
+            disabled={loading}
+            className="w-full bg-brand-blue text-white font-semibold py-3 rounded-lg shadow-md hover:bg-brand-blue-dark transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-blue flex items-center justify-center"
           >
-            Sign In
+            {loading ? (
+              <Loader2 className="animate-spin h-5 w-5 mr-2" />
+            ) : null}
+            {loading ? 'Signing In...' : 'Sign In'}
           </motion.button>
+
         </form>
       </motion.div>
     </div>
