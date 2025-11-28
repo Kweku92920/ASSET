@@ -17,6 +17,18 @@ function HandoverForm({ onSubmit, assetToEdit, isEditMode }) {
     { id: uuidv4(), deviceType: '', customDeviceType: '', brand: '', model: '', serialNumber: '' }
   ]);
 
+  // Simple department list with option to add more
+  const [departments, setDepartments] = useState([
+    'IT',
+    'Finance',
+    'HR',
+    'Operations',
+    'Administration',
+  ]);
+
+  const [isAddingDepartment, setIsAddingDepartment] = useState(false);
+  const [newDepartment, setNewDepartment] = useState('');
+
   const [termsAccepted, setTermsAccepted] = useState(false);
   const staffSigRef = useRef(null);
   const adminSigRef = useRef(null);
@@ -26,6 +38,15 @@ function HandoverForm({ onSubmit, assetToEdit, isEditMode }) {
       setStaffDetails(assetToEdit.staffDetails);
       setDevices(assetToEdit.devices);
       setTermsAccepted(assetToEdit.termsAccepted);
+      let existingDept = null;
+      if (assetToEdit.staffDetails) {
+        existingDept = assetToEdit.staffDetails.department;
+      }
+      if (existingDept) {
+        setDepartments(prev =>
+          prev.includes(existingDept) ? prev : [...prev, existingDept]
+        );
+      }
     } else {
       const now = new Date();
       const formattedDateTime = now.toLocaleString('en-US', {
@@ -40,15 +61,38 @@ function HandoverForm({ onSubmit, assetToEdit, isEditMode }) {
     const { name, value } = e.target;
     setStaffDetails(prev => ({ ...prev, [name]: value }));
   };
+
+  const handleSaveNewDepartment = () => {
+    const trimmed = newDepartment.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    setDepartments(prev => {
+      if (prev.includes(trimmed)) return prev;
+      return [...prev, trimmed];
+    });
+
+    setStaffDetails(prev => ({ ...prev, department: trimmed }));
+    setNewDepartment('');
+    setIsAddingDepartment(false);
+  };
   
   const handleDeviceChange = (id, e) => {
     const { name, value } = e.target;
-    const updatedDevices = devices.map(device => {
-      if (device.id === id) {
-        return { ...device, [name]: value };
+
+    const updatedDevices = [...devices];
+
+    for (let i = 0; i < updatedDevices.length; i++) {
+      if (updatedDevices[i].id === id) {
+        updatedDevices[i] = {
+          ...updatedDevices[i],
+          [name]: value,
+        };
+        break;
       }
-      return device;
-    });
+    }
+
     setDevices(updatedDevices);
   };
 
@@ -84,20 +128,43 @@ function HandoverForm({ onSubmit, assetToEdit, isEditMode }) {
 
   const isFormValid = () => {
     const staffFields = ['fullName', 'staffId', 'position', 'department'];
-    if (staffFields.some(field => staffDetails[field].trim() === '')) return false;
-
-    for (const device of devices) {
-      if (device.deviceType === '' || device.brand.trim() === '' || device.model.trim() === '' || device.serialNumber.trim() === '') return false;
-      if (device.deviceType === 'Others' && device.customDeviceType.trim() === '') return false;
+    for (let i = 0; i < staffFields.length; i++) {
+      const field = staffFields[i];
+      const value = staffDetails[field];
+      if (!value || value.trim() === '') {
+        return false;
+      }
     }
 
-    if (!termsAccepted) return false;
-    if (staffSigRef.current.isEmpty() || adminSigRef.current.isEmpty()) return false;
+    for (let i = 0; i < devices.length; i++) {
+      const device = devices[i];
+
+      if (
+        device.deviceType === '' ||
+        device.brand.trim() === '' ||
+        device.model.trim() === '' ||
+        device.serialNumber.trim() === ''
+      ) {
+        return false;
+      }
+
+      if (device.deviceType === 'Others' && device.customDeviceType.trim() === '') {
+        return false;
+      }
+    }
+
+    if (!termsAccepted) {
+      return false;
+    }
+
+    if (staffSigRef.current.isEmpty() || adminSigRef.current.isEmpty()) {
+      return false;
+    }
 
     return true;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!isFormValid()) {
@@ -119,9 +186,13 @@ function HandoverForm({ onSubmit, assetToEdit, isEditMode }) {
       submittedAt: isEditMode ? assetToEdit.submittedAt : new Date().toISOString()
     };
 
-    onSubmit(submissionData);
-    if (!isEditMode) {
-      resetForm();
+    try {
+      await onSubmit(submissionData);
+      if (!isEditMode) {
+        resetForm();
+      }
+    } catch (error) {
+      toast.error(error.message || 'Failed to submit the asset handover.');
     }
   };
 
@@ -142,27 +213,136 @@ function HandoverForm({ onSubmit, assetToEdit, isEditMode }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Staff Details Section */}
+          {/* Staff Details Section (kept simple and explicit) */}
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-4 pb-2 border-b-2 border-brand-blue">Staff Details</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {Object.keys(staffDetails).map(key => (
-                <div key={key} className={key === 'dateTime' ? 'md:col-span-2' : ''}>
-                  <label htmlFor={key} className="block text-sm font-medium text-gray-700 mb-2 capitalize">
-                    {key.replace(/([A-Z])/g, ' $1')}{' '}
-                    {key !== 'dateTime' && <span className="text-red-500">*</span>}
-                  </label>
-                  <input
-                    type="text" id={key} name={key}
-                    value={staffDetails[key]}
-                    onChange={handleStaffInputChange}
-                    readOnly={key === 'dateTime'}
-                    className={`w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all duration-200 outline-none ${key === 'dateTime' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                    placeholder={`Enter ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}`}
-                    required={key !== 'dateTime'}
-                  />
-                </div>
-              ))}
+              {/* Full Name */}
+              <div>
+                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="fullName"
+                  name="fullName"
+                  value={staffDetails.fullName}
+                  onChange={handleStaffInputChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all duration-200 outline-none"
+                  placeholder="Enter full name"
+                  required
+                />
+              </div>
+
+              {/* Staff ID */}
+              <div>
+                <label htmlFor="staffId" className="block text-sm font-medium text-gray-700 mb-2">
+                  Staff ID <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="staffId"
+                  name="staffId"
+                  value={staffDetails.staffId}
+                  onChange={handleStaffInputChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all duration-200 outline-none"
+                  placeholder="Enter staff ID"
+                  required
+                />
+              </div>
+
+              {/* Position */}
+              <div>
+                <label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-2">
+                  Position <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="position"
+                  name="position"
+                  value={staffDetails.position}
+                  onChange={handleStaffInputChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all duration-200 outline-none bg-white"
+                  required
+                >
+                  <option value="">Select position</option>
+                  <option value="Junior Staff">Junior Staff</option>
+                  <option value="Senior Staff">Senior Staff</option>
+                </select>
+              </div>
+
+              {/* Department with dropdown and add-new option */}
+              <div>
+                <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-2">
+                  Department <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="department"
+                  name="department"
+                  value={staffDetails.department}
+                  onChange={handleStaffInputChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-all duration-200 outline-none bg-white"
+                  required
+                >
+                  <option value="">Select department</option>
+                  {departments.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => setIsAddingDepartment(true)}
+                  className="mt-2 text-sm text-brand-blue hover:underline"
+                >
+                  + Add another department
+                </button>
+
+                {isAddingDepartment && (
+                  <div className="mt-2 flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      value={newDepartment}
+                      onChange={(e) => setNewDepartment(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-transparent outline-none"
+                      placeholder="Type new department"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveNewDepartment}
+                      className="px-4 py-2 text-sm font-medium text-white bg-brand-blue rounded-lg hover:bg-brand-blue-dark"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingDepartment(false);
+                        setNewDepartment('');
+                      }}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Date & Time (read-only) */}
+              <div className="md:col-span-2">
+                <label htmlFor="dateTime" className="block text-sm font-medium text-gray-700 mb-2">
+                  Date &amp; Time
+                </label>
+                <input
+                  type="text"
+                  id="dateTime"
+                  name="dateTime"
+                  value={staffDetails.dateTime}
+                  readOnly
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
+                />
+              </div>
             </div>
           </section>
 

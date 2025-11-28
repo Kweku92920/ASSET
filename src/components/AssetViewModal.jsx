@@ -1,14 +1,17 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, Printer } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 function AssetViewModal({ isOpen, onClose, asset }) {
+  const navigate = useNavigate();
+
   if (!asset) return null;
 
   const { staffDetails, devices, signatures, submittedAt } = asset;
 
   const handlePrint = () => {
-    window.open(`/print-asset/${asset.id}`, '_blank');
+    navigate(`/print-asset/${asset.id}`);
   };
 
   return (

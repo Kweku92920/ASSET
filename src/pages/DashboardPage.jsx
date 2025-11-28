@@ -1,45 +1,43 @@
 import React, { useState, useRef } from 'react';
-import { FileDown, FileUp, Printer } from 'lucide-react';
+import { FileDown, FileUp } from 'lucide-react';
 import { toast } from 'react-toastify';
 import Papa from 'papaparse';
 import { v4 as uuidv4 } from 'uuid';
 import RecentHandoversTable from '../components/RecentHandoversTable';
 import AssetViewModal from '../components/AssetViewModal';
 
-
-/**
- * The main dashboard page.
- * Displays asset statistics and a table of recent handovers.
- */
-
-function DashboardPage({ assets, onDeleteAsset, onImportAssets }) {
+function DashboardPage({ assets, onDeleteAsset, onImportAssets, isLoading }) {
   const fileInputRef = useRef(null);
   const [viewingAsset, setViewingAsset] = useState(null);
-
- /**
-   * Handles exporting the asset data to a CSV file.
-   */
 
   const handleExport = () => {
     if (assets.length === 0) {
       toast.info("No assets to export.");
       return;
     }
-   // Flatten the data so each device has its own row in the CSV
-    const flattenedData = assets.flatMap(handover => 
-      handover.devices.map(device => ({
-        HandoverID: handover.id,
-        StaffName: handover.staffDetails.fullName,
-        StaffID: handover.staffDetails.staffId,
-        StaffPosition: handover.staffDetails.position,
-        StaffDepartment: handover.staffDetails.department,
-        HandoverDate: handover.submittedAt,
-        DeviceType: device.deviceType,
-        Brand: device.brand,
-        Model: device.model,
-        SerialNumber: device.serialNumber,
-      }))
-    );
+
+    const flattenedData = [];
+
+    for (let i = 0; i < assets.length; i++) {
+      const handover = assets[i];
+
+      for (let j = 0; j < handover.devices.length; j++) {
+        const device = handover.devices[j];
+        const row = {
+          HandoverID: handover.id,
+          StaffName: handover.staffDetails.fullName,
+          StaffID: handover.staffDetails.staffId,
+          StaffPosition: handover.staffDetails.position,
+          StaffDepartment: handover.staffDetails.department,
+          HandoverDate: handover.submittedAt,
+          DeviceType: device.deviceType,
+          Brand: device.brand,
+          Model: device.model,
+          SerialNumber: device.serialNumber,
+        };
+        flattenedData.push(row);
+      }
+    }
 
     const csv = Papa.unparse(flattenedData);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -52,17 +50,12 @@ function DashboardPage({ assets, onDeleteAsset, onImportAssets }) {
     toast.success("Assets exported successfully!");
   };
 
-
- /**
-   * Triggers the file input dialog.
-   */
   const handleImportClick = () => {
-    fileInputRef.current.click();
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
-/**
-   * Handles the file import process when a user selects a file.
-   * @param {React.ChangeEvent<HTMLInputElement>} event - The file input change event.
-   */
+
   const handleFileImport = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -72,11 +65,14 @@ function DashboardPage({ assets, onDeleteAsset, onImportAssets }) {
       skipEmptyLines: true,
       complete: (results) => {
         try {
-          // This object will temporarily store handovers by their ID to group devices. 
-          const groupedByHandover = results.data.reduce((acc, row) => {
+          const groupedByHandover = {};
+
+          for (let i = 0; i < results.data.length; i++) {
+            const row = results.data[i];
             const handoverId = row.HandoverID || uuidv4();
-            if (!acc[handoverId]) {
-              acc[handoverId] = {
+
+            if (!groupedByHandover[handoverId]) {
+              groupedByHandover[handoverId] = {
                 id: handoverId,
                 staffDetails: {
                   fullName: row.StaffName,
@@ -91,15 +87,17 @@ function DashboardPage({ assets, onDeleteAsset, onImportAssets }) {
                 submittedAt: row.HandoverDate,
               };
             }
-            acc[handoverId].devices.push({
+
+            const device = {
               id: uuidv4(),
               deviceType: row.DeviceType,
               brand: row.Brand,
               model: row.Model,
               serialNumber: row.SerialNumber,
-            });
-            return acc;
-          }, {});
+            };
+
+            groupedByHandover[handoverId].devices.push(device);
+          }
 
           const importedAssets = Object.values(groupedByHandover);
           onImportAssets(importedAssets);
@@ -113,11 +111,8 @@ function DashboardPage({ assets, onDeleteAsset, onImportAssets }) {
         console.error("CSV parsing error:", error);
       }
     });
-    event.target.value = null;
-  };
 
-  const handlePrintAll = () => {
-    toast.info("Printing all records is not supported. Please print individual records from the 'View' modal.");
+    event.target.value = null;
   };
 
   return (
@@ -145,17 +140,17 @@ function DashboardPage({ assets, onDeleteAsset, onImportAssets }) {
                 <FileDown size={16} />
                 Export
               </button>
-               <button onClick={handlePrintAll} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-brand-gray-700 bg-brand-gray-100 hover:bg-brand-gray-200 rounded-lg transition-colors">
-                <Printer size={16} />
-                Print
-              </button>
             </div>
           </div>
-          <RecentHandoversTable 
-            assets={assets} 
-            onDeleteAsset={onDeleteAsset} 
-            onViewAsset={(asset) => setViewingAsset(asset)}
-          />
+          {isLoading ? (
+            <div className="text-center py-10 text-brand-gray-500">Loading assets...</div>
+          ) : (
+            <RecentHandoversTable 
+              assets={assets} 
+              onDeleteAsset={onDeleteAsset} 
+              onViewAsset={(asset) => setViewingAsset(asset)}
+            />
+          )}
         </div>
       </div>
       <AssetViewModal 

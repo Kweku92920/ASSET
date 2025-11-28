@@ -1,38 +1,41 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
-import { Package, User, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 
-const ADMIN_USERNAME = 'Admin';
-const ADMIN_PASSWORD = 'admin';
-
+/**
+ * Simple login screen for the administrator.
+ *
+ * For a beginner:
+ * - The username and password fields are stored in local state (useState)
+ * - When the form is submitted, we call onLogin(...) which is passed
+ *   down from App.jsx. App.jsx takes care of calling the backend API and
+ *   updating the global login state.
+ */
 function LoginPage({ onLogin }) {
+  // Local state for the two input fields
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  // Handle the form submit event
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username || !password) {
       toast.error('Please enter both username and password.');
       return;
     }
 
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      onLogin({
-        id: 'admin',
-        fullName: ADMIN_USERNAME,
-        staffId: ADMIN_PASSWORD,
-        position: 'Administrator',
-        department: 'IT',
-        role: 'Admin',
-      });
-    } else {
-      toast.error('Invalid credentials. Please try again.');
+    setLoading(true);
+    try {
+      await onLogin({ username, password });
+    } catch (error) {
+      toast.error(error.message || 'Invalid credentials. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -70,13 +73,21 @@ function LoginPage({ onLogin }) {
             <div className="relative">
               <Lock size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-gray-400" />
               <input
-                type= {showPassword ? 'text' : 'password'}
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
                 className="w-full bg-white border border-brand-gray-300 rounded-lg pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue transition-all"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-gray-400 hover:text-brand-gray-600"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 

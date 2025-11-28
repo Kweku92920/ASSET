@@ -8,6 +8,7 @@ function PrintableRequisition({ asset }) {
   return (
     <div id="printable-area" className="bg-white p-8 font-sans text-sm text-gray-800">
       <header className="text-center mb-10">
+        <img src="/logo.png" alt="Logo" className="h-12 w-12 justify-center mx-auto mb-2" />
         <h1 className="text-xl font-bold uppercase">The Church of Pentecost Headquarters</h1>
         <h2 className="text-lg font-semibold uppercase">Information Management Department</h2>
         <h3 className="text-2xl font-bold uppercase mt-4 underline">Asset Requisition</h3>

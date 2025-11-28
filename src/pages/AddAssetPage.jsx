@@ -7,22 +7,32 @@ function AddAssetPage({ assets, onAddAsset, onUpdateAsset }) {
   const { assetId } = useParams();
   const navigate = useNavigate();
   const isEditMode = !!assetId;
-  
-  const assetToEdit = isEditMode ? assets?.find(a => a.id === assetId) : null;
 
-  const handleSubmit = (assetData) => {
-    if (isEditMode) {
-      if (onUpdateAsset) {
-        onUpdateAsset(assetId, assetData);
-        navigate('/');
-      }
-    } else {
-      if (onAddAsset) {
-        onAddAsset(assetData);
-        navigate('/');
+  let assetToEdit = null;
+  if (isEditMode && assets) {
+    for (let i = 0; i < assets.length; i++) {
+      if (assets[i].id === assetId) {
+        assetToEdit = assets[i];
+        break;
       }
     }
-  };
+  }
+
+  async function handleSubmit(assetData) {
+    try {
+      if (isEditMode) {
+        if (onUpdateAsset) {
+          await onUpdateAsset(assetId, assetData);
+          navigate('/');
+        }
+      } else if (onAddAsset) {
+        await onAddAsset(assetData);
+        navigate('/');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Something went wrong while saving the asset.');
+    }
+  }
 
   if (isEditMode && !assetToEdit) {
     return (

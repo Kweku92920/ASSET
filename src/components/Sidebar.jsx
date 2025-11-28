@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, PackagePlus, ShieldCheck, X } from 'lucide-react';
+import { LayoutDashboard, PackagePlus, Menu, X } from 'lucide-react';
 
 const navLinks = [
   { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
@@ -9,7 +9,7 @@ const navLinks = [
 ];
 
 const sidebarVariants = {
-  open: (isMobile) => ({
+  open: () => ({
     width: 256,
     x: 0,
     transition: { type: 'spring', stiffness: 300, damping: 30 }
@@ -59,8 +59,12 @@ function Sidebar({ isOpen, toggleSidebar }) {
             )}
           </AnimatePresence>
         </div>
-        <button onClick={toggleSidebar} className="md:hidden text-brand-gray-600 hover:text-brand-blue">
-         
+        <button
+          onClick={toggleSidebar}
+          className="md:hidden text-brand-gray-600 hover:text-brand-blue"
+          aria-label="Toggle sidebar"
+        >
+          {isOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
       <nav className="flex-1 px-4 py-6">
